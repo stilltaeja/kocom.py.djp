@@ -23,7 +23,7 @@ import configparser
 
 
 # define -------------------------------
-SW_VERSION = '2023.08.012'
+SW_VERSION = '2023.09.15'
 CONFIG_FILE = 'kocom.conf'
 BUF_SIZE = 100
 
@@ -38,15 +38,16 @@ chksum_position = 18  # 18th byte
 type_t_dic = {'30b':'send', '30d':'ack'}
 seq_t_dic = {'c':1, 'd':2, 'e':3, 'f':4}
 # device_t_dic = {'01':'wallpad', '0e':'light', '2c':'gas', '36':'thermo', '3b': 'plug', '44':'elevator', '48':'fan'}  # 2023.08 AC, AIR 추가
-device_t_dic = {'01': 'wallpad', '0e': 'light', '2c': 'gas', '36': 'thermo', '39': 'ac', '3b': 'plug', '44': 'elevator', '48': 'fan', '98': 'air'}
+# device_t_dic = {'01': 'wallpad', '0e': 'light', '2c': 'gas', '36': 'thermo', '39': 'ac', '3b': 'plug', '44': 'elevator', '48': 'fan', '98': 'air'}
+device_t_dic = {'01': 'wallpad', '0e': 'light', '2c': 'gas', '36': 'thermo', '44': 'elevator'}
 cmd_t_dic = {'00':'state', '01':'on', '02':'off', '3a':'query'}
-room_t_dic = {'00':'livingroom', '01':'room1', '02':'room2', '03':'room3', '04':'kitchen'}
+room_t_dic = {'00':'livingroom', '01':'room1', '02':'room2', '03':'room3', '04':'room4'}
 
 type_h_dic = {v: k for k, v in type_t_dic.items()}
 seq_h_dic = {v: k for k, v in seq_t_dic.items()}
 device_h_dic = {v: k for k, v in device_t_dic.items()}
 cmd_h_dic = {v: k for k, v in cmd_t_dic.items()}
-room_h_dic = {'livingroom':'00', 'myhome':'00', 'room1':'01', 'room2':'02', 'room3':'03', 'kitchen':'04'}
+room_h_dic = {'livingroom':'00', 'myhome':'00', 'room1':'01', 'room2':'02', 'room3':'03', 'room4':'04'}
 
 # mqtt functions ----------------------------
 
@@ -299,29 +300,29 @@ def light_parse(value):
     return ret
 
 
-def fan_parse(value):
-    preset_dic = {'40':'Low', '80':'Medium', 'c0':'High'}
+# def fan_parse(value):
+#    preset_dic = {'40':'Low', '80':'Medium', 'c0':'High'}
 #   state = 'off' if value[:2] == '10' else 'on'
-    state = 'off' if value[:2] == '00' else 'on'
-    preset = 'Off' if state == 'off' else preset_dic.get(value[4:6])
-    logtxt='[MQTT Parse | Fan] value[{}], state[{}]'.format(value, state)    # 20221108 주석기능 추가
-    if logtxt != "" and config.get('Log', 'show_recv_hex') == 'True':
-        logging.info(logtxt)
-    return { 'state': state, 'preset': preset}
+#    state = 'off' if value[:2] == '00' else 'on'
+#    preset = 'Off' if state == 'off' else preset_dic.get(value[4:6])
+#    logtxt='[MQTT Parse | Fan] value[{}], state[{}]'.format(value, state)    # 20221108 주석기능 추가
+#    if logtxt != "" and config.get('Log', 'show_recv_hex') == 'True':
+#        logging.info(logtxt)
+#    return { 'state': state, 'preset': preset}
 
 # 2023.08 AC 추가
-def ac_parse(value):
-    mode_dic = {'00': 'cool', '01': 'fan_only', '02': 'dry', '03': 'auto'}
-    spd_dic = {'01': 'LOW', '02': 'MEDIUM', '03': 'HIGH'}
-    
-    state = mode_dic.get(value[2:4]) if value[:2] == '10' else 'off'
-    fan = spd_dic.get(value[4:6])
-    temperature = int(value[8:10], 16)
-    target = int(value[10:12], 16)
-    logtxt = '[MQTT Parse | Ac] value[{}], state[{}]'.format(value, state)    # 20221108 주석기능 추가
-    if logtxt != '' and config.get('Log', 'show_recv_hex') == 'True':
-        logging.info(logtxt)
-    return {'state': state, 'fan': fan, 'temperature': temperature, 'target': target}
+# def ac_parse(value):
+#    mode_dic = {'00': 'cool', '01': 'fan_only', '02': 'dry', '03': 'auto'}
+#    spd_dic = {'01': 'LOW', '02': 'MEDIUM', '03': 'HIGH'}
+#    
+#    state = mode_dic.get(value[2:4]) if value[:2] == '10' else 'off'
+#    fan = spd_dic.get(value[4:6])
+#    temperature = int(value[8:10], 16)
+#    target = int(value[10:12], 16)
+#    logtxt = '[MQTT Parse | Ac] value[{}], state[{}]'.format(value, state)    # 20221108 주석기능 추가
+#    if logtxt != '' and config.get('Log', 'show_recv_hex') == 'True':
+#        logging.info(logtxt)
+#    return {'state': state, 'fan': fan, 'temperature': temperature, 'target': target}
 
 # query device --------------------------
 
@@ -443,32 +444,32 @@ def mqtt_on_message(mqttc, obj, msg):
         send_wait_response(dest=dev_id, value=value, log='thermo settemp')
 
  # 2023.08 AC 추가
-    elif 'ac' in topic_d and 'ac_mode' in topic_d:
-        is_on = '10' if command != 'off' else '00'
-        acmode_dic = {'off': '00', 'cool': '00','fan_only': '01', 'dry': '02', 'auto': '03'}
-        dev_id = device_h_dic['ac']+'{0:02x}'.format(int(topic_d[3]))
-        #q = query(dev_id)
-        #settemp_hex = '{0:02x}'.format(int(config.get('User', 'ac_init_temp'))) if q['flag'] != False else '12'
-        
-        value = is_on + acmode_dic.get(command, config.get('User', 'ac_init_mode')) + '000000000000'
-        send_wait_response(dest=dev_id, value=value, log='ac mode')
+ #   elif 'ac' in topic_d and 'ac_mode' in topic_d:
+ #       is_on = '10' if command != 'off' else '00'
+ #       acmode_dic = {'off': '00', 'cool': '00','fan_only': '01', 'dry': '02', 'auto': '03'}
+ #       dev_id = device_h_dic['ac']+'{0:02x}'.format(int(topic_d[3]))
+ #       #q = query(dev_id)
+ 3       #settemp_hex = '{0:02x}'.format(int(config.get('User', 'ac_init_temp'))) if q['flag'] != False else '12'
+ #       
+ #       value = is_on + acmode_dic.get(command, config.get('User', 'ac_init_mode')) + '000000000000'
+ #       send_wait_response(dest=dev_id, value=value, log='ac mode')
 
-    elif 'ac' in topic_d and 'fan_mode' in topic_d:
-        fan_dic = {'LOW': '01', 'MEDIUM': '02', 'HIGH': '03'}
-        dev_id = device_h_dic['ac']+'{0:02x}'.format(int(topic_d[3]))
-        #q = query(dev_id)
-        #settemp_hex = '{0:02x}'.format(int(config.get('User', 'ac_init_temp'))) if q['flag'] != False else '12'
+ #   elif 'ac' in topic_d and 'fan_mode' in topic_d:
+ #       fan_dic = {'LOW': '01', 'MEDIUM': '02', 'HIGH': '03'}
+ #       dev_id = device_h_dic['ac']+'{0:02x}'.format(int(topic_d[3]))
+ #       #q = query(dev_id)
+ #       #settemp_hex = '{0:02x}'.format(int(config.get('User', 'ac_init_temp'))) if q['flag'] != False else '12'
         
-        value = '1010' + fan_dic.get(command, config.get('User', 'ac_init_fan_mode')) + '0000000000'
-        send_wait_response(dest=dev_id, value=value, log='ac mode')
+ #       value = '1010' + fan_dic.get(command, config.get('User', 'ac_init_fan_mode')) + '0000000000'
+ #       send_wait_response(dest=dev_id, value=value, log='ac mode')
         
-    # ac set temp : kocom/room/ac/3/set_temp/command
-    elif 'ac' in topic_d and 'set_temp' in topic_d:
-        dev_id = device_h_dic['ac']+'{0:02x}'.format(int(topic_d[3]))
-        settemp_hex = '{0:02x}'.format(int(float(command)))
+ #   # ac set temp : kocom/room/ac/3/set_temp/command
+ #   elif 'ac' in topic_d and 'set_temp' in topic_d:
+ #       dev_id = device_h_dic['ac']+'{0:02x}'.format(int(topic_d[3]))
+ #       settemp_hex = '{0:02x}'.format(int(float(command)))
 
-        value = '1010000000' + settemp_hex + '0000'
-        send_wait_response(dest=dev_id, value=value, log='ac settemp')
+ #       value = '1010000000' + settemp_hex + '0000'
+ #       send_wait_response(dest=dev_id, value=value, log='ac settemp')
  
  
     # light on/off : kocom/livingroom/light/1/command
@@ -520,33 +521,33 @@ def mqtt_on_message(mqttc, obj, msg):
             threading.Thread(target=mqttc.publish, args=("kocom/myhome/elevator/state", state_off)).start()
 
     # kocom/livingroom/fan/set_preset_mode/command
-    elif 'fan' in topic_d and 'set_preset_mode' in topic_d:
-        dev_id = device_h_dic['fan'] + room_h_dic.get(topic_d[1])
-        onoff_dic = {'off':'0000', 'on':'1101'}  
-       #onoff_dic = {'off':'1000', 'on':'1100'}
-        speed_dic = {'Off':'00', 'Low':'40', 'Medium':'80', 'High':'c0'}
-        if command == 'Off':
-            onoff = onoff_dic['off']
-        elif command in speed_dic.keys(): # fan on with specified speed
-            onoff = onoff_dic['on']
+  #  elif 'fan' in topic_d and 'set_preset_mode' in topic_d:
+  #      dev_id = device_h_dic['fan'] + room_h_dic.get(topic_d[1])
+  #      onoff_dic = {'off':'0000', 'on':'1101'}  
+  #     #onoff_dic = {'off':'1000', 'on':'1100'}
+  #      speed_dic = {'Off':'00', 'Low':'40', 'Medium':'80', 'High':'c0'}
+  #      if command == 'Off':
+  #          onoff = onoff_dic['off']
+  #      elif command in speed_dic.keys(): # fan on with specified speed
+  #          onoff = onoff_dic['on']
 
-        speed = speed_dic.get(command)
-        value = onoff + speed + '0'*10
-        send_wait_response(dest=dev_id, value=value, log='fan')
+  #      speed = speed_dic.get(command)
+  #      value = onoff + speed + '0'*10
+  #      send_wait_response(dest=dev_id, value=value, log='fan')
 
     # kocom/livingroom/fan/command
-    elif 'fan' in topic_d:
-        dev_id = device_h_dic['fan'] + room_h_dic.get(topic_d[1])
-        onoff_dic = {'off':'0000', 'on':'1101'}  
-       #onoff_dic = {'off':'1000', 'on':'1100'}
-        speed_dic = {'Low':'40', 'Medium':'80', 'High':'c0'}
-        init_fan_mode = config.get('User', 'init_fan_mode')
-        if command in onoff_dic.keys(): # fan on off with previous speed
-            onoff = onoff_dic.get(command)
-            speed = speed_dic.get(init_fan_mode)  #value = query(dev_id)['value']  #speed = value[4:6]
+  #  elif 'fan' in topic_d:
+  #      dev_id = device_h_dic['fan'] + room_h_dic.get(topic_d[1])
+  #      onoff_dic = {'off':'0000', 'on':'1101'}  
+  #     #onoff_dic = {'off':'1000', 'on':'1100'}
+  #      speed_dic = {'Low':'40', 'Medium':'80', 'High':'c0'}
+  #      init_fan_mode = config.get('User', 'init_fan_mode')
+  #      if command in onoff_dic.keys(): # fan on off with previous speed
+  #          onoff = onoff_dic.get(command)
+  #          speed = speed_dic.get(init_fan_mode)  #value = query(dev_id)['value']  #speed = value[4:6]
 
-        value = onoff + speed + '0'*10
-        send_wait_response(dest=dev_id, value=value, log='fan')
+  #      value = onoff + speed + '0'*10
+  #      send_wait_response(dest=dev_id, value=value, log='fan')
 
     # kocom/myhome/query/command
     elif 'query' in topic_d:
@@ -639,7 +640,7 @@ def publish_discovery(dev, sub=''):
             'qos': 0,
             'uniq_id': '{}_{}_{}'.format('kocom', 'wallpad', dev),
             'device': {
-                'name': '코콤 스마트 월패드',
+                'name': '코콤 스마트 월패드_스타힐스',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
                 'mdl': '스마트 월패드',
