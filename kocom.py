@@ -410,8 +410,8 @@ def mqtt_on_message(mqttc, obj, msg):
         heatmode_dic = {'heat': '11', 'off': '00'}
         dev_id = device_h_dic['thermo']+'{0:02x}'.format(int(topic_d[3]))
         q = query(dev_id)
-        settemp_hex = q['value'][4:6] if q['flag']!=False else '14'
-        #settemp_hex = '{0:02x}'.format(int(config.get('User', 'init_temp'))) if q['flag']!=False else '14'  #/////////////////////////////// 수정
+        # settemp_hex = q['value'][4:6] if q['flag']!=False else '14'
+        settemp_hex = '{0:02x}'.format(int(config.get('User', 'init_temp'))) if q['flag']!=False else '14'  
         value = heatmode_dic.get(command) + '00' + settemp_hex + '0000000000' 
         send_wait_response(dest=dev_id, value=value, log='thermo heatmode')
 
