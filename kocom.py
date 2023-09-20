@@ -281,9 +281,10 @@ def parse(hex_data):
     return ret
 
 
-def thermo_parse(value):
+def thermo_parse(value):    #/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ret = { 'heat_mode': 'heat' if value[:2]=='11' else 'off',
             'away': 'true' if value[2:4]=='01' else 'false',
+            'away': 'true' == 'heat_mode': 'off',   # ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             'set_temp': int(value[4:6], 16) if value[:2]=='11' else int(config.get('User', 'init_temp')),
             'cur_temp': int(value[8:10], 16)}
     return ret
@@ -408,8 +409,8 @@ def mqtt_on_message(mqttc, obj, msg):
         heatmode_dic = {'heat': '11', 'off': '00'}
         dev_id = device_h_dic['thermo']+'{0:02x}'.format(int(topic_d[3]))
         q = query(dev_id)
-        #settemp_hex = q['value'][4:6] if q['flag']!=False else '14'
-        settemp_hex = '{0:02x}'.format(int(config.get('User', 'init_temp'))) if q['flag']!=False else '14'
+        settemp_hex = q['value'][4:6] if q['flag']!=False else '14'
+        #settemp_hex = '{0:02x}'.format(int(config.get('User', 'init_temp'))) if q['flag']!=False else '14'  #/////////////////////////////// 수정
         value = heatmode_dic.get(command) + '00' + settemp_hex + '0000000000' 
         send_wait_response(dest=dev_id, value=value, log='thermo heatmode')
 
