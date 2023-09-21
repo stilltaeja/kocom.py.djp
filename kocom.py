@@ -283,7 +283,7 @@ def parse(hex_data):
 
 def thermo_parse(value):    #/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     # ret = { #'heat_mode': 'heat' if value[:2]=='11' else 'off',
-     ret = { 'heat_mode': 'heat' if value[:4] != '1100' else 'off',
+    ret = { 'heat_mode': 'heat' if value[:4] != '1100' else 'off',
     # ret = { 'heat_mode': 'heat' if value[:4] == '1100' else 'fan_only' if value[:4] == '1101' else 'off', 
             #'heat_mode': 'heat' if value[2:4]!='01' else 'off',
             #'away': 'true' if value[2:4]=='01' else 'false',
