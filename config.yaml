@@ -1,6 +1,6 @@
 ---
 name: Kocom Wallpad with RS485 for 화성시청역 스타힐스
-version: 2023.09.15
+version: 2025.03.15
 slug: kocom_py
 description: Kocom Wallpad for Home Assistant
 arch:
