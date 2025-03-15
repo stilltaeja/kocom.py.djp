@@ -32,7 +32,7 @@ read_write_gap = 0.03  # minimal time interval between last read to write
 polling_interval = 300  # polling interval
 
 header_h = 'aa55'
-trailer_h = '0d0d'
+trailer_h = '0d0a'
 packet_size = 21  # total 21bytes
 chksum_position = 18  # 18th byte
 
@@ -548,7 +548,7 @@ def packet_processor(p):
             state = {'state': 'off'}
         logtxt='[MQTT publish|elevator] data[{}]'.format(state)
         mqttc.publish("kocom/myhome/elevator/state", json.dumps(state))
-        # aa5530bc0044000100010300000000000000350d0d
+        # aa5530bc0044000100010300000000000000350d0a
 
     if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
         logging.info(logtxt)
